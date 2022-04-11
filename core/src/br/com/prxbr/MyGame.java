@@ -5,6 +5,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -19,6 +21,9 @@ import java.util.Iterator;
 
 public class MyGame extends ApplicationAdapter {
 
+	//Configuration Settings
+	GameState gameplayCurrentState;
+
 	//Movement Settings
 	private int bucketSpeedMovement = 400;
 	private int dropSpeedMovement = 200;
@@ -27,12 +32,13 @@ public class MyGame extends ApplicationAdapter {
 	private Vector3 touchPos = new Vector3();
 	private OrthographicCamera camera;
 	private SpriteBatch batch;
-	private int screenWidth = 800;
-	private int screenHeight = 480;
+	private int screenWidth;
+	private int screenHeight;
 
 	//Assets
 	private Texture dropImage;
 	private Texture bucketImage;
+	private Texture pauseMenuImage;
 	private Sound dropSound;
 	private Music rainMusic;
 
@@ -45,16 +51,22 @@ public class MyGame extends ApplicationAdapter {
 	//Raindrops
 	private Array<Rectangle> raindropsList;
 	private long lastDropTime;
-	private  int raindropWidth = 64;
-	private  int raindropHeight = 64;
+	private int raindropWidth = 64;
+	private int raindropHeight = 64;
 	/** END_NODES **/
 
 	@Override
 	public void create() {
 
+		//Definition
+		gameplayCurrentState = GameState.GAMEPLAY;
+		screenWidth = Gdx.graphics.getWidth();
+		screenHeight = Gdx.graphics.getHeight();
+
 		//Textures
 		dropImage = new Texture("drop.png");
 		bucketImage = new Texture("bucket.png");
+		pauseMenuImage = new Texture("pauseScreen.png");
 
 		//Sounds and Musics
 		dropSound = Gdx.audio.newSound(Gdx.files.internal("drop.wav"));
@@ -84,25 +96,12 @@ public class MyGame extends ApplicationAdapter {
 	@Override
 	public void render() {
 
-		if (TimeUtils.millis() - lastDropTime > 1000) spawnRaindrop();
+		if (gameplayCurrentState == GameState.GAMEPLAY)
+			mainLoop();
 
-		ScreenUtils.clear(0, 0, 0.2f, 1);
-		camera.update();
-		batch.setProjectionMatrix(camera.combined);
-		batch.begin();
+		if (gameplayCurrentState == GameState.MENU)
+			pauseMenu();
 
-		//draw Bucket
-		batch.draw(bucketImage, bucket.x, bucket.y);
-
-		//draw Current-Drop
-		for (Rectangle raindrop: raindropsList) {
-			batch.draw(dropImage, raindrop.x, raindrop.y);
-		}
-
-		batch.end();
-
-		moveRaindrop();
-		moveBucket();
 	}
 
 	@Override
@@ -114,6 +113,50 @@ public class MyGame extends ApplicationAdapter {
 		batch.dispose();
 	}
 
+	@Override
+	public void pause() {
+		gameplayCurrentState = GameState.MENU;
+	}
+
+	private void pauseMenu() {
+		batch.begin();
+		batch.draw(pauseMenuImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		batch.end();
+
+		rainMusic.pause();
+	}
+
+	private void mainLoop() {
+		if (gameplayCurrentState == GameState.GAMEPLAY) {
+
+			if (!rainMusic.isPlaying())
+				rainMusic.play();
+
+			if (TimeUtils.millis() - lastDropTime > 1000) spawnRaindrop();
+
+			ScreenUtils.clear(0, 0, 0.2f, 1);
+			camera.update();
+			batch.setProjectionMatrix(camera.combined);
+			batch.begin();
+
+			//draw Bucket
+			batch.draw(bucketImage, bucket.x, bucket.y);
+
+			//draw Current-Drop
+			for (Rectangle raindrop : raindropsList) {
+				batch.draw(dropImage, raindrop.x, raindrop.y);
+			}
+
+			batch.end();
+
+			moveRaindrop();
+			moveBucket();
+
+			if (Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
+				gameplayCurrentState = GameState.MENU;
+			}
+		}
+	}
 
 	private void moveBucket() {
 		//Mouse or TouchScreen Inputs
@@ -125,10 +168,10 @@ public class MyGame extends ApplicationAdapter {
 
 		//Keyboard Inputs
 		if (Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A)) {
-			bucket.x -= bucketSpeedMovement * Gdx.graphics.getDeltaTime();;
+			bucket.x -= bucketSpeedMovement * Gdx.graphics.getDeltaTime();
 		}
 		if (Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D)) {
-			bucket.x += bucketSpeedMovement * Gdx.graphics.getDeltaTime();;
+			bucket.x += bucketSpeedMovement * Gdx.graphics.getDeltaTime();
 		}
 
 		if (bucket.x < 0) bucket.x = 0;

@@ -12,6 +12,7 @@ public class DesktopLauncher {
 		config.height = 480;
 		config.vSyncEnabled = true;
 		config.foregroundFPS = 60;
+		//config.useGL30 = true;
 		new LwjglApplication(new MyGame(), config);
 	}
 }
